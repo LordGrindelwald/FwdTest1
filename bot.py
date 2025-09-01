@@ -1,92 +1,35 @@
-# MrSyD
-# Telegram Channel @Bot_Cracker
-# Developer @syd_xyz
+from config import API_ID, API_HASH, BOT_TOKEN, SESSION
+from pyrogram import Client
 
+# **CRITICAL FIX:** Define the 'user' client at the top level of the file.
+# This makes it importable by other files like main.py.
+user = Client(
+    name="user_session",
+    api_id=API_ID,
+    api_hash=API_HASH,
+    session_string=SESSION
+)
 
-
-
-import asyncio
-import logging 
-import logging.config
-from database import db 
-from config import Config  
-from aiohttp import web
-from plugins import web_server
-from pyrogram import Client, __version__, idle
-from pyrogram.raw.all import layer 
-from pyrogram.enums import ParseMode
-from pyrogram.errors import FloodWait 
-
-logging.config.fileConfig('logging.conf')
-logging.getLogger().setLevel(logging.INFO)
-logging.getLogger("pyrogram").setLevel(logging.ERROR)
-
-PORT = Config.PORT
-
-class Bot(Client): 
+class Bot(Client):
     def __init__(self):
         super().__init__(
-            Config.BOT_SESSION,
-            api_hash=Config.API_HASH,
-            api_id=Config.API_ID,
-            plugins={
-                "root": "plugins"
-            },
-            workers=50,
-            bot_token=Config.BOT_TOKEN
+            name="bot_session",
+            api_id=API_ID,
+            api_hash=API_HASH,
+            bot_token=BOT_TOKEN,
+            plugins=dict(root="plugins")
         )
-        self.log = logging
+        self.LOGGER = LOGGER
 
     async def start(self):
         await super().start()
-        me = await self.get_me()
-        logging.info(f"{me.first_name} with for pyrogram v{__version__} (Layer {layer}) started on @{me.username}.")
-        self.id = me.id
-        self.username = me.username
-        self.first_name = me.first_name
-        self.set_parse_mode(ParseMode.DEFAULT)
-        text = "**ʙᴏᴛ ʀᴇꜱᴛᴀʀᴛᴇᴅ!**"
-        logging.info(text)
-        success = failed = 0
-        users = await db.get_all_frwd()
-        app = web.AppRunner(await web_server())
-        await app.setup()
-        bind_address = "0.0.0.0"
-        await web.TCPSite(app, bind_address, PORT).start()
-        
-        await idle()
-        logging.info("OK")
-        async for user in users:
-           chat_id = user['user_id']
-           try:
-              await self.send_message(chat_id, text)
-              success += 1
-           except FloodWait as e:
-              await asyncio.sleep(e.value + 5)
-              await self.send_message(chat_id, text)
-              success += 1
-           except Exception:
-              failed += 1 
-    #    await self.send_message("venombotsupport", text)
-        if (success + failed) != 0:
-           await db.rmve_frwd(all=True)
-           logging.info(f"Restart message status"
-                 f"success: {success}"
-                 f"failed: {failed}")
+        self.LOGGER.info(f"Bot started as {self.me.first_name}.")
 
     async def stop(self, *args):
-        msg = f"@{self.username} stopped. Bye."
         await super().stop()
-        logging.info(msg)
+        self.LOGGER.info("Bot stopped.")
 
-
-
-
-
-
-
-
-
-# MrSyD
-# Telegram Channel @Bot_Cracker
-# Developer @syd_xyz
+# You can add any other necessary imports or setup here
+import logging
+logging.basicConfig(level=logging.INFO)
+LOGGER = logging.getLogger(__name__)
